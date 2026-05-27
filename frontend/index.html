@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LuminaSQL</title>
+
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="header">
+            <h1>Lumina<span>SQL</span></h1>
+            <p>Your Personal Ai Database Assistant.</p>
+        </div>
+
+        <div class="bento-grid">
+
+            <!-- LEFT SIDE -->
+
+            <div class="card db-card">
+
+                <h2>Database Connection</h2>
+
+                <div class="db-form">
+
+                    <input
+                        type="text"
+                        id="host"
+                        placeholder="Host"
+                        value="localhost"
+                    />
+
+                    <input
+                        type="number"
+                        id="port"
+                        placeholder="Port"
+                        value="3306"
+                    />
+
+                    <input
+                        type="text"
+                        id="username"
+                        placeholder="Username"
+                        value="root"
+                    />
+
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="Password"
+                    />
+
+                    <input
+                        type="text"
+                        id="database"
+                        placeholder="Database Name"
+                        value="company_db"
+                    />
+
+                </div>
+
+                <div id="dbStatus" class="db-status">
+                    Not Connected
+                </div>
+
+                <textarea
+                    id="question"
+                    placeholder="Example: Show all customers from Dhaka"
+                ></textarea>
+
+                <button id="askBtn">
+                    Generate & Execute
+                </button>
+
+            </div>
+
+            <!-- RIGHT SIDE -->
+
+            <div class="left-panel">
+
+                <div class="card sql-card">
+
+                    <h2>Generated SQL</h2>
+
+                    <div id="sqlOutput" class="sql-box">
+                        SQL will appear here...
+                    </div>
+
+                </div>
+
+                <div class="card explanation-card">
+
+                    <h2>AI Explanation</h2>
+
+                    <div id="explanationBox" class="explanation-box">
+                        AI explanation will appear here...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RESULTS -->
+
+        <div class="card results-card">
+
+            <h2>Results</h2>
+
+            <div id="resultContainer" class="table-wrapper">
+                <p class="placeholder">Results will appear here...</p>
+            </div>
+
+        </div>
+        <div id="loader" class="loader hidden"></div>
+        
+        <footer class="credits">
+            ⓒ 2026 Debapriyo Ganguly
+        </footer>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

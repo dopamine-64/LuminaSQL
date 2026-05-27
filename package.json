@@ -12,13 +12,19 @@
     "start": "electron .",
     "dist": "electron-builder",
     "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win --publish=never"
+    "dist:win": "electron-builder --win"
   },
 
   "build": {
     "appId": "com.luminasql.desktop",
     "productName": "LuminaSQL",
-    "publish": null,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "dopamine-64",
+        "repo": "LuminaSQL"
+      }
+    ],
 
     "directories": {
       "output": "dist"

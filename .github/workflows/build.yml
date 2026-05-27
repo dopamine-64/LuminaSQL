@@ -1,0 +1,50 @@
+name: Build LuminaSQL
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  build-windows:
+
+    runs-on: windows-latest
+
+    steps:
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+
+      - name: Install Python Dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Backend EXE
+        run: |
+          cd backend
+          pyinstaller main.py --onefile
+
+      - name: Install Node Modules
+        run: npm install
+
+      - name: Build Electron App
+        run: npm run dist:win
+
+      - name: Upload Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: LuminaSQL-Windows
+          path: dist/*.exe

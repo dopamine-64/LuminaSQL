@@ -16,6 +16,7 @@
   "build": {
     "appId": "com.luminasql.desktop",
     "productName": "LuminaSQL",
+    "publish": null,
     "directories": {
       "output": "dist"
     },

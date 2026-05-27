@@ -32,6 +32,7 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
+          
       - name: Build Backend EXE
         run: |
           cd backend

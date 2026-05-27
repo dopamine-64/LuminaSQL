@@ -7,24 +7,29 @@
   "author": "Your Name",
   "license": "ISC",
   "type": "commonjs",
+
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win"
   },
+
   "build": {
     "appId": "com.luminasql.desktop",
     "productName": "LuminaSQL",
     "publish": null,
+
     "directories": {
       "output": "dist"
     },
+
     "files": [
       "electron/**/*",
       "frontend/**/*",
       "package.json"
     ],
+
     "extraResources": [
       {
         "from": "backend/dist",
@@ -33,29 +38,26 @@
     ],
 
     "mac": {
-      "target": [
-        "dmg"
-      ],
+      "target": ["dmg"],
       "category": "public.app-category.developer-tools",
       "icon": "frontend/assets/icon.icns"
     },
+
     "win": {
-      "target": [
-        "nsis"
-      ],
+      "target": ["nsis"],
       "icon": "frontend/assets/icon.ico"
     },
+
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     }
   },
-  "keywords": [],
-  "dependencies": {
-    "child_process": "^1.0.2"
-  },
+
+  "dependencies": {},
+
   "devDependencies": {
-    "electron": "^42.2.0",
+    "electron": "^29.4.6",
     "electron-builder": "^26.8.1"
   }
 }

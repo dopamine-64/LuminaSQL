@@ -7,7 +7,7 @@
 
 ## 📊 Status
 
-![GitHub release](https://img.shields.io/github/v/release/dopamine-64/LuminaSQL)
+![Version](https://img.shields.io/github/v/release/dopamine-64/LuminaSQL?label=version)
 ![GitHub all releases](https://img.shields.io/github/downloads/dopamine-64/LuminaSQL/total)
 ![License](https://img.shields.io/github/license/dopamine-64/LuminaSQL)
 

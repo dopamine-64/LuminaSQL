@@ -81,8 +81,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload Windows Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LuminaSQL-Windows
+          path: dist/*.exe
+
       - name: Build & Publish Electron App (macOS)
         if: runner.os == 'macOS'
         run: npx electron-builder --mac --publish onTag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS Artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LuminaSQL-macOS
+          path: dist/*.dmg

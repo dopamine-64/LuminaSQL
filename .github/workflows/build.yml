@@ -2,14 +2,13 @@ name: Build & Release LuminaSQL
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
-
   build:
     strategy:
       matrix:
@@ -18,7 +17,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-
       - name: Checkout Repo
         uses: actions/checkout@v4
 
@@ -38,15 +36,53 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build Backend EXE
+      - name: Build Backend (Windows)
+        if: runner.os == 'Windows'
         run: |
           cd backend
-          pyinstaller main.py --onefile
+          pyinstaller main.py --onefile --name main `
+            --hidden-import=uvicorn.logging `
+            --hidden-import=uvicorn.loops `
+            --hidden-import=uvicorn.loops.auto `
+            --hidden-import=uvicorn.protocols `
+            --hidden-import=uvicorn.protocols.http `
+            --hidden-import=uvicorn.protocols.http.auto `
+            --hidden-import=uvicorn.protocols.websockets `
+            --hidden-import=uvicorn.protocols.websockets.auto `
+            --hidden-import=uvicorn.lifespan `
+            --hidden-import=uvicorn.lifespan.on `
+            --hidden-import=sqlalchemy.dialects.mysql `
+            --hidden-import=pymysql
+
+      - name: Build Backend (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd backend
+          pyinstaller main.py --onefile --name main \
+            --hidden-import=uvicorn.logging \
+            --hidden-import=uvicorn.loops \
+            --hidden-import=uvicorn.loops.auto \
+            --hidden-import=uvicorn.protocols \
+            --hidden-import=uvicorn.protocols.http \
+            --hidden-import=uvicorn.protocols.http.auto \
+            --hidden-import=uvicorn.protocols.websockets \
+            --hidden-import=uvicorn.protocols.websockets.auto \
+            --hidden-import=uvicorn.lifespan \
+            --hidden-import=uvicorn.lifespan.on \
+            --hidden-import=sqlalchemy.dialects.mysql \
+            --hidden-import=pymysql
 
       - name: Install Node Modules
-        run: npm install
+        run: npm ci
 
-      - name: Build & Publish Electron App
-        run: npx electron-builder --${{ matrix.os == 'windows-latest' && 'win' || 'mac' }} --publish always
+      - name: Build & Publish Electron App (Windows)
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Publish Electron App (macOS)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

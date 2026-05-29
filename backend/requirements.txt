@@ -2,5 +2,6 @@ fastapi
 uvicorn
 httpx
 openai
-pyinstaller
 pydantic
+sqlalchemy
+pymysql

@@ -75,9 +75,9 @@ jobs:
       - name: Install Node Modules
         run: npm ci
 
-      - name: Build & Publish Electron App (Windows)
+      - name: Build Electron App (Windows)
         if: runner.os == 'Windows'
-        run: npx electron-builder --win --publish onTag
+        run: npx electron-builder --win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -88,9 +88,9 @@ jobs:
           name: LuminaSQL-Windows
           path: dist/*.exe
 
-      - name: Build & Publish Electron App (macOS)
+      - name: Build Electron App (macOS)
         if: runner.os == 'macOS'
-        run: npx electron-builder --mac --publish onTag
+        run: npx electron-builder --mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -100,3 +100,12 @@ jobs:
         with:
           name: LuminaSQL-macOS
           path: dist/*.dmg
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.exe
+            dist/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

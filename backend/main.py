@@ -1,15 +1,13 @@
+print("RUNNING NEW BACKEND FILE")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+import re
 
 from ai import generate_sql, fix_sql, explain_sql
 from executor import run_query
-from fastapi.responses import JSONResponse
-
-from database_manager import (
-    create_db_engine,
-    test_connection
-)
+from database_manager import create_db_engine, test_connection
 
 app = FastAPI()
 
@@ -21,86 +19,198 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+DANGEROUS_KEYWORDS = ["DELETE", "UPDATE", "INSERT", "DROP", "ALTER", "TRUNCATE"]
+
+
 class AskRequest(BaseModel):
-
-    host: str
-    port: int
-
-    username: str
-    password: str
-
-    database: str
-
-    question: str
+    host:         str
+    port:         int
+    username:     str
+    password:     str
+    database:     str
+    question:     str
+    user_api_key: str = ""
 
 
-@app.post("/ask")
-def ask(data: AskRequest):
+class ExecuteRequest(BaseModel):
+    host:         str
+    port:         int
+    username:     str
+    password:     str
+    database:     str
+    sql:          str
+    question:     str
+    user_api_key: str = ""
 
+
+def clean_sql(raw: str) -> str:
+    """Strip markdown fences, label prefixes, backticks, and trailing semicolons."""
+    sql = raw.strip()
+    sql = re.sub(r"^```sql\s*", "", sql, flags=re.IGNORECASE)
+    sql = re.sub(r"^```\s*",    "", sql)
+    sql = re.sub(r"\s*```$",    "", sql)
+    sql = re.sub(r"^(SQL|Query|Fixed SQL)\s*:\s*", "", sql, flags=re.IGNORECASE)
+    sql = sql.replace("`", "")
+    return sql.strip().rstrip(";")
+
+
+def is_dangerous(sql: str) -> bool:
+    upper = sql.upper()
+    return any(kw in upper for kw in DANGEROUS_KEYWORDS)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------
+# /generate  — only produces SQL + flags danger, does NOT execute
+# ---------------------------------------------------------------
+@app.post("/generate")
+def generate(data: AskRequest):
     try:
         engine = create_db_engine(
-            data.host,
-            data.port,
-            data.username,
-            data.password,
-            data.database
+            data.host, data.port, data.username, data.password, data.database
         )
 
         if not test_connection(engine):
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "sql": "",
-                    "result": "Database connection failed",
-                    "explanation": "",
-                    "fixed": False
-                }
-            )
+            return JSONResponse(status_code=400, content={
+                "sql":       "",
+                "dangerous": False,
+                "error":     "Database connection failed. Check your credentials."
+            })
 
-        sql = generate_sql(data.question, engine)
-
-        result = run_query(sql, engine)
-
-        explanation = explain_sql(sql)
-
-        fixed = False
-
-        if "error" in result:
-            fixed_sql = fix_sql(
-                data.question,
-                sql,
-                result["error"],
-                engine
-            )
-
-            retry_result = run_query(fixed_sql, engine)
-
-            if "error" not in retry_result:
-                sql = fixed_sql
-                result = retry_result
-                explanation = explain_sql(sql)
-                fixed = True
+        key = data.user_api_key
+        sql = clean_sql(generate_sql(data.question, engine, key))
 
         return {
-            "sql": sql,
-            "result": result,
-            "explanation": explanation,
-            "fixed": fixed
+            "sql":       sql,
+            "dangerous": is_dangerous(sql),
         }
 
     except Exception as e:
-        print("❌ Backend crash:", e)
+        print(f"❌ /generate crash: {e}")
+        return JSONResponse(status_code=500, content={
+            "sql":       "",
+            "dangerous": False,
+            "error":     str(e)
+        })
 
-        return JSONResponse(
-            status_code=500,
-            content={
-                "sql": "",
-                "result": "Server error",
-                "explanation": str(e),
-                "fixed": False
-            }
+
+# ---------------------------------------------------------------
+# /execute  — runs a given SQL, auto-fixes on error, explains
+# ---------------------------------------------------------------
+@app.post("/execute")
+def execute(data: ExecuteRequest):
+    try:
+        engine = create_db_engine(
+            data.host, data.port, data.username, data.password, data.database
         )
+
+        key   = data.user_api_key
+        sql   = data.sql
+        fixed = False
+
+        result = run_query(sql, engine)
+
+        if isinstance(result, dict) and "error" in result:
+            print(f"Query failed, attempting fix. Error: {result['error']}")
+
+            fixed_sql    = clean_sql(fix_sql(data.question, sql, result["error"], engine, key))
+            retry_result = run_query(fixed_sql, engine)
+
+            if not (isinstance(retry_result, dict) and "error" in retry_result):
+                sql    = fixed_sql
+                result = retry_result
+                fixed  = True
+            else:
+                explanation = explain_sql(sql, key)
+                return JSONResponse(status_code=200, content={
+                    "sql":         fixed_sql,
+                    "result":      retry_result,
+                    "explanation": f"Query failed and auto-fix also failed. Error: {retry_result['error']}",
+                    "fixed":       False
+                })
+
+        explanation = explain_sql(sql, key)
+
+        return {
+            "sql":         sql,
+            "result":      result,
+            "explanation": explanation,
+            "fixed":       fixed
+        }
+
+    except Exception as e:
+        print(f"❌ /execute crash: {e}")
+        return JSONResponse(status_code=500, content={
+            "sql":         "",
+            "result":      "Server error",
+            "explanation": str(e),
+            "fixed":       False
+        })
+
+
+# ---------------------------------------------------------------
+# /ask  — kept for backwards compatibility, calls both internally
+# ---------------------------------------------------------------
+@app.post("/ask")
+def ask(data: AskRequest):
+    try:
+        engine = create_db_engine(
+            data.host, data.port, data.username, data.password, data.database
+        )
+
+        if not test_connection(engine):
+            return JSONResponse(status_code=400, content={
+                "sql":         "",
+                "result":      "Database connection failed. Check your credentials.",
+                "explanation": "",
+                "fixed":       False
+            })
+
+        key = data.user_api_key
+        sql = clean_sql(generate_sql(data.question, engine, key))
+
+        result = run_query(sql, engine)
+        fixed  = False
+
+        if isinstance(result, dict) and "error" in result:
+            fixed_sql    = clean_sql(fix_sql(data.question, sql, result["error"], engine, key))
+            retry_result = run_query(fixed_sql, engine)
+
+            if not (isinstance(retry_result, dict) and "error" in retry_result):
+                sql    = fixed_sql
+                result = retry_result
+                fixed  = True
+            else:
+                return JSONResponse(status_code=200, content={
+                    "sql":         fixed_sql,
+                    "result":      retry_result,
+                    "explanation": f"Query failed and auto-fix also failed. Error: {retry_result['error']}",
+                    "fixed":       False
+                })
+
+        explanation = explain_sql(sql, key)
+
+        return {
+            "sql":         sql,
+            "result":      result,
+            "explanation": explanation,
+            "fixed":       fixed
+        }
+
+    except Exception as e:
+        print(f"❌ /ask crash: {e}")
+        return JSONResponse(status_code=500, content={
+            "sql":         "",
+            "result":      "Server error",
+            "explanation": str(e),
+            "fixed":       False
+        })
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app,host="127.0.0.1",port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

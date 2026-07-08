@@ -1,272 +1,442 @@
-const hostInput = document.getElementById("host");
-const portInput = document.getElementById("port");
-const usernameInput = document.getElementById("username");
-const passwordInput = document.getElementById("password");
-const databaseInput = document.getElementById("database");
+/* ============================================================
+   LuminaSQL – script.js
+   ============================================================ */
 
-const dbStatus = document.getElementById("dbStatus");
-const askBtn = document.getElementById("askBtn");
-const questionInput = document.getElementById("question");
-const sqlOutput = document.getElementById("sqlOutput");
+const hostInput       = document.getElementById("host");
+const portInput       = document.getElementById("port");
+const usernameInput   = document.getElementById("username");
+const passwordInput   = document.getElementById("password");
+const databaseInput   = document.getElementById("database");
+const userApiKeyInput = document.getElementById("userApiKey");
+const toggleApiKeyBtn = document.getElementById("toggleApiKey");
+const dbStatus        = document.getElementById("dbStatus");
+const statusText      = dbStatus.querySelector(".status-text");
+const askBtn          = document.getElementById("askBtn");
+const questionInput   = document.getElementById("question");
+const sqlOutput       = document.getElementById("sqlOutput");
 const resultContainer = document.getElementById("resultContainer");
-const loader = document.getElementById("loader");
-const explanationBox = document.getElementById("explanationBox");
+const loader          = document.getElementById("loader");
+const explanationBox  = document.getElementById("explanationBox");
+const copyBtn         = document.getElementById("copyBtn");
+const rowCount        = document.getElementById("rowCount");
+const appContainer    = document.querySelector(".container");
 
 const API_URL = "http://127.0.0.1:8000/ask";
 
-askBtn.addEventListener("click", async () => {
+// -------------------------------------------------------
+// BOOT – wait for backend, then reveal UI
+// -------------------------------------------------------
 
-    const question = questionInput.value.trim();
+async function waitForBackend() {
+    const loadingScreen = document.getElementById("loadingScreen");
 
-    if (!question) {
-        alert("Please enter a question.");
-        return;
+    while (true) {
+        try {
+            const res = await fetch("http://127.0.0.1:8000/health");
+            if (res.ok) break;
+        } catch (e) {
+            // still waiting
+        }
+        await new Promise(r => setTimeout(r, 500));
     }
 
-    sqlOutput.innerText = "Generating SQL...";
-    resultContainer.innerHTML = "<p>Loading...</p>";
-    loader.classList.remove("hidden");
-
-    try {
-
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                host: hostInput.value,
-                port: parseInt(portInput.value),
-                username: usernameInput.value,
-                password: passwordInput.value,
-                database: databaseInput.value,
-                question: question
-            })
+    loadingScreen.classList.add("fade-out");
+    setTimeout(() => {
+        loadingScreen.style.display = "none";
+        appContainer.style.display = "block";
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                appContainer.classList.add("visible");
+            });
         });
+    }, 500);
+}
 
-        // 🚨 SAFE CHECK (IMPORTANT)
-        let data;
+waitForBackend();
 
-        try {
-            const text = await response.text();
 
-            try {
-                data = JSON.parse(text);
-            } catch (err) {
-                throw new Error(text || "Backend returned invalid response");
-            }
+// -------------------------------------------------------
+// PERSIST INPUTS
+// Password excluded for security. API key saved locally
+// since it's the user's own key they chose to enter.
+// -------------------------------------------------------
 
-        } catch (err) {
-            loader.classList.add("hidden");
-            throw err;
-        }
+const persistedInputs = [hostInput, portInput, usernameInput, databaseInput, questionInput, userApiKeyInput];
 
-        // HANDLE HTTP ERRORS
-        if (!response.ok) {
-            throw new Error(data?.error || "Server error");
-        }
+persistedInputs.forEach(input => {
+    const saved = localStorage.getItem(input.id);
+    if (saved !== null) input.value = saved;
+    input.addEventListener("input", () => localStorage.setItem(input.id, input.value));
+});
 
-        if (data.error) {
-            loader.classList.add("hidden");
-            sqlOutput.innerText = "Error";
-            resultContainer.innerHTML = `<p class="error">${data.error}</p>`;
-            dbStatus.innerText = "Connection Failed";
-            dbStatus.classList.remove("connected");
-            return;
-        }
 
-        // ONLY now mark connected
-        dbStatus.innerText = `Connected to ${databaseInput.value}`;
-        dbStatus.classList.add("connected");
+// -------------------------------------------------------
+// API KEY FAB – open / close popover
+// -------------------------------------------------------
 
-        function formatSQL(sql){
+const apiKeyFab     = document.getElementById("apiKeyFab");
+const apiKeyPopover = document.getElementById("apiKeyPopover");
+const apiKeyClose   = document.getElementById("apiKeyClose");
+const popoverStatus = document.getElementById("popoverStatus");
 
-        sql=sql
-        .replace(/\s+/g," ")
-        .replace(/SELECT/gi,"\nSELECT")
-        .replace(/FROM/gi,"\nFROM")
-        .replace(/LEFT JOIN/gi,"\nLEFT JOIN")
-        .replace(/RIGHT JOIN/gi,"\nRIGHT JOIN")
-        .replace(/INNER JOIN/gi,"\nINNER JOIN")
-        .replace(/WHERE/gi,"\nWHERE")
-        .replace(/GROUP BY/gi,"\nGROUP BY")
-        .replace(/ORDER BY/gi,"\nORDER BY")
-        .replace(/LIMIT/gi,"\nLIMIT")
-        .replace(/ON/gi,"\nON")
-        .trim();
+function openPopover() {
+    apiKeyPopover.classList.remove("hidden");
+    apiKeyFab.classList.add("active");
+    userApiKeyInput.focus();
+}
 
-        sql=sql
-        .replace(/\bSELECT\b/gi,'<span class="sql-keyword">SELECT</span>')
-        .replace(/\bFROM\b/gi,'<span class="sql-keyword">FROM</span>')
-        .replace(/\bWHERE\b/gi,'<span class="sql-keyword">WHERE</span>')
-        .replace(/\bLEFT JOIN\b/gi,'<span class="sql-keyword">LEFT JOIN</span>')
-        .replace(/\bRIGHT JOIN\b/gi,'<span class="sql-keyword">RIGHT JOIN</span>')
-        .replace(/\bINNER JOIN\b/gi,'<span class="sql-keyword">INNER JOIN</span>')
-        .replace(/\bGROUP BY\b/gi,'<span class="sql-keyword">GROUP BY</span>')
-        .replace(/\bORDER BY\b/gi,'<span class="sql-keyword">ORDER BY</span>')
-        .replace(/\bLIMIT\b/gi,'<span class="sql-keyword">LIMIT</span>')
-        .replace(/\bON\b/gi,'<span class="sql-keyword">ON</span>');
+function closePopover() {
+    apiKeyPopover.classList.add("hidden");
+    apiKeyFab.classList.remove("active");
+    // Show saved indicator on the FAB if a key is set
+    if (userApiKeyInput.value.trim()) {
+        apiKeyFab.style.borderColor = "rgba(93,223,45,0.6)";
+    } else {
+        apiKeyFab.style.borderColor = "";
+    }
+}
 
-        return sql;
-        }
+apiKeyFab.addEventListener("click", () => {
+    apiKeyPopover.classList.contains("hidden") ? openPopover() : closePopover();
+});
 
-        function formatExplanation(text){
-        return text
+apiKeyClose.addEventListener("click", closePopover);
 
-        .replace(/\*\*(.*?)\*\*/g,"<b>$1</b>")
-        .replace(/`(.*?)`/g,"<code>$1</code>")
-        .replace(/\n/g,"<br>");
-        }
-
-        dbStatus.innerText =
-            `Connected to ${databaseInput.value}`;
-        dbStatus.classList.add("connected");
-        sqlOutput.innerHTML =
-        formatSQL(data.sql || "No SQL generated")
-
-        explanationBox.innerHTML = formatExplanation(
-        data.explanation || "No explanation available"
-        );
-
-        if (data.sql && isDangerousQuery(data.sql)) {
-
-            const confirmed = confirm(
-                "WARNING:\n\nThis query may modify or delete database data.\n\nDo you want to continue?"
-            );
-
-            if (!confirmed) {
-                sqlOutput.innerText = "Query cancelled.";
-                resultContainer.innerHTML = "";
-                return;
-            }
-        }
-
-        renderResults(data.result);
-        loader.classList.add("hidden");
-
-    } catch (error) {
-
-        loader.classList.add("hidden");
-        dbStatus.innerText = "Connection Failed";
-        dbStatus.classList.remove("connected");
-        sqlOutput.innerText = "Error generating SQL";
-        resultContainer.innerHTML = `
-            <p class="error">
-                ${error.message}
-            </p>
-        `;
-        console.error(error);
+// Close on outside click
+document.addEventListener("click", (e) => {
+    if (!apiKeyFab.contains(e.target) && !apiKeyPopover.contains(e.target)) {
+        if (!apiKeyPopover.classList.contains("hidden")) closePopover();
     }
 });
 
+// Show/hide key toggle
+toggleApiKeyBtn.addEventListener("click", () => {
+    const isPassword = userApiKeyInput.type === "password";
+    userApiKeyInput.type = isPassword ? "text" : "password";
+    toggleApiKeyBtn.querySelector(".eye-icon").classList.toggle("hidden", isPassword);
+    toggleApiKeyBtn.querySelector(".eye-off-icon").classList.toggle("hidden", !isPassword);
+});
+
+// Show green border on FAB if a saved key exists on load
+window.addEventListener("DOMContentLoaded", () => {
+    if (userApiKeyInput.value.trim()) {
+        apiKeyFab.style.borderColor = "rgba(93,223,45,0.6)";
+    }
+});
+
+
+// -------------------------------------------------------
+// DANGEROUS QUERY CHECK
+// -------------------------------------------------------
+
 function isDangerousQuery(sql) {
-
-    const dangerousKeywords = [
-        "DELETE",
-        "UPDATE",
-        "INSERT",
-        "DROP",
-        "ALTER",
-        "TRUNCATE"
-    ];
-
-    const upperSQL = sql.toUpperCase();
-
-    return dangerousKeywords.some(keyword =>
-        upperSQL.includes(keyword)
-    );
+    const dangerous = ["DELETE", "UPDATE", "INSERT", "DROP", "ALTER", "TRUNCATE"];
+    return dangerous.some(kw => sql.toUpperCase().includes(kw));
 }
 
+
+// -------------------------------------------------------
+// SQL FORMATTER – newlines + syntax highlighting
+// -------------------------------------------------------
+
+function formatSQL(raw) {
+    let sql = raw
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    const clauses = [
+        "SELECT","FROM","LEFT\\s+OUTER\\s+JOIN","RIGHT\\s+OUTER\\s+JOIN",
+        "LEFT\\s+JOIN","RIGHT\\s+JOIN","INNER\\s+JOIN","CROSS\\s+JOIN","JOIN",
+        "WHERE","GROUP\\s+BY","ORDER\\s+BY","HAVING","LIMIT","OFFSET","UNION\\s+ALL",
+        "UNION","EXCEPT","INTERSECT","ON","SET"
+    ];
+
+    clauses.forEach(clause => {
+        sql = sql.replace(new RegExp(`\\b(${clause})\\b`, "gi"), "\n$1");
+    });
+
+    sql = sql.replace(/^\n/, "").trim();
+
+    const keywords = [
+        "SELECT","DISTINCT","FROM","WHERE","AND","OR","NOT","IN","EXISTS","BETWEEN",
+        "LIKE","IS","NULL","AS","ON","JOIN","LEFT","RIGHT","INNER","OUTER","CROSS",
+        "FULL","GROUP\\s+BY","ORDER\\s+BY","HAVING","LIMIT","OFFSET","UNION","ALL",
+        "EXCEPT","INTERSECT","INSERT","INTO","VALUES","UPDATE","SET","DELETE","CREATE",
+        "TABLE","INDEX","VIEW","DROP","ALTER","ADD","COLUMN","PRIMARY","KEY","FOREIGN",
+        "REFERENCES","CONSTRAINT","DEFAULT","UNIQUE","CHECK","AUTO_INCREMENT",
+        "CASE","WHEN","THEN","ELSE","END","WITH","OVER","PARTITION\\s+BY","WINDOW",
+        "ROW_NUMBER","RANK","DENSE_RANK","ASC","DESC","BY"
+    ];
+
+    keywords.forEach(kw => {
+        sql = sql.replace(
+            new RegExp(`\\b(${kw})\\b`, "gi"),
+            `<span class="sql-keyword">$1</span>`
+        );
+    });
+
+    const funcs = ["COUNT","SUM","AVG","MIN","MAX","COALESCE","NULLIF","IFNULL",
+                   "CONCAT","LENGTH","TRIM","UPPER","LOWER","SUBSTR","SUBSTRING",
+                   "ROUND","FLOOR","CEIL","NOW","DATE","YEAR","MONTH","DAY","CAST","CONVERT"];
+    funcs.forEach(fn => {
+        sql = sql.replace(
+            new RegExp(`\\b(${fn})\\b(?=\\s*\\()`, "gi"),
+            `<span class="sql-fn">$1</span>`
+        );
+    });
+
+    sql = sql.replace(/'([^']*)'/g, `<span class="sql-str">'$1'</span>`);
+    sql = sql.replace(/\b(\d+(\.\d+)?)\b/g, `<span class="sql-num">$1</span>`);
+    sql = sql.replace(/(--[^\n]*)/g, `<span class="sql-comment">$1</span>`);
+
+    return sql;
+}
+
+
+// -------------------------------------------------------
+// EXPLANATION FORMATTER
+// -------------------------------------------------------
+
+function formatExplanation(text) {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
+        .replace(/\*(.*?)\*/g,     "<em>$1</em>")
+        .replace(/`(.*?)`/g,       "<code>$1</code>")
+        .replace(/\n/g,            "<br>");
+}
+
+
+// -------------------------------------------------------
+// RENDER RESULTS TABLE
+// -------------------------------------------------------
+
 function renderResults(results) {
+    rowCount.classList.add("hidden");
 
     if (!results) {
-        resultContainer.innerHTML =
-            "<p>No results found.</p>";
+        resultContainer.innerHTML = '<p class="placeholder-text">No results found.</p>';
         return;
     }
-
     if (results.error) {
-        resultContainer.innerHTML = `
-            <p class="error">${results.error}</p>
-        `;
+        resultContainer.innerHTML = `<p class="error">${results.error}</p>`;
         return;
     }
-
-    if (
-        !Array.isArray(results)
-        || results.length === 0
-    ) {
-
-        resultContainer.innerHTML =
-            "<p>No data returned.</p>";
+    if (typeof results === "string") {
+        resultContainer.innerHTML = `<p class="placeholder-text">${results}</p>`;
+        return;
+    }
+    if (!Array.isArray(results) || results.length === 0) {
+        resultContainer.innerHTML = '<p class="placeholder-text">Query executed successfully. No rows returned.</p>';
         return;
     }
 
     const columns = Object.keys(results[0]);
-
-    let tableHTML = `
-        <table>
-            <thead>
-                <tr>
-    `;
-
-    columns.forEach(col => {
-        tableHTML += `<th>${col}</th>`;
-    });
-
-    tableHTML += `
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
+    let html = `<table><thead><tr>`;
+    columns.forEach(col => { html += `<th>${col}</th>`; });
+    html += `</tr></thead><tbody>`;
     results.forEach(row => {
-        tableHTML += "<tr>";
+        html += "<tr>";
         columns.forEach(col => {
-
-            tableHTML += `
-                <td>${row[col]}</td>
-            `;
+            const val = row[col];
+            html += `<td>${val !== null ? val : "<em>NULL</em>"}</td>`;
         });
-
-        tableHTML += "</tr>";
+        html += "</tr>";
     });
+    html += `</tbody></table>`;
+    resultContainer.innerHTML = html;
 
-    tableHTML += `
-            </tbody>
-        </table>
-    `;
-    resultContainer.innerHTML = tableHTML;
+    rowCount.textContent = `${results.length} row${results.length !== 1 ? "s" : ""}`;
+    rowCount.classList.remove("hidden");
 }
 
-// SAVE INPUTS
 
-const inputs=[
-hostInput,
-portInput,
-usernameInput,
-passwordInput,
-databaseInput,
-questionInput
-];
+// -------------------------------------------------------
+// COPY SQL BUTTON
+// -------------------------------------------------------
 
-inputs.forEach(input=>{
+let rawSQLText = "";
 
-const savedValue=
-localStorage.getItem(input.id);
+copyBtn.addEventListener("click", async () => {
+    if (!rawSQLText) return;
 
-if(savedValue!==null){
+    try {
+        await navigator.clipboard.writeText(rawSQLText);
+    } catch {
+        const ta = document.createElement("textarea");
+        ta.value = rawSQLText;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+    }
 
-input.value=savedValue;
-}
+    const copyIcon  = copyBtn.querySelector(".copy-icon");
+    const checkIcon = copyBtn.querySelector(".check-icon");
+    const copyLabel = copyBtn.querySelector(".copy-label");
 
-input.addEventListener("input",()=>{
+    copyIcon.classList.add("hidden");
+    checkIcon.classList.remove("hidden");
+    copyLabel.textContent = "Copied!";
+    copyBtn.classList.add("copied");
 
-localStorage.setItem(
-input.id,
-input.value
-);
-
+    setTimeout(() => {
+        copyIcon.classList.remove("hidden");
+        checkIcon.classList.add("hidden");
+        copyLabel.textContent = "Copy";
+        copyBtn.classList.remove("copied");
+    }, 2000);
 });
 
+
+// -------------------------------------------------------
+// HELPERS
+// -------------------------------------------------------
+
+function getBasePayload(question = "") {
+    return {
+        host:         hostInput.value,
+        port:         parseInt(portInput.value),
+        username:     usernameInput.value,
+        password:     passwordInput.value,
+        database:     databaseInput.value,
+        question:     question,
+        user_api_key: userApiKeyInput.value.trim()
+    };
+}
+
+async function fetchJSON(url, payload) {
+    const res  = await fetch(url, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload)
+    });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error(text || "Backend returned an invalid response"); }
+    if (!res.ok) throw new Error(data?.error || data?.explanation || data?.result || "Server error");
+    return data;
+}
+
+// Custom modal — replaces browser confirm() for dangerous query warning
+function showDangerModal(sql) {
+    return new Promise(resolve => {
+        const overlay = document.createElement("div");
+        overlay.className = "danger-overlay";
+        overlay.innerHTML = `
+            <div class="danger-modal">
+                <div class="danger-icon">⚠️</div>
+                <h3 class="danger-title">Warning</h3>
+                <p class="danger-desc">This query may <strong>modify or delete</strong> data and cannot be undone.</p>
+                <div class="danger-sql">${sql.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
+                <div class="danger-actions">
+                    <button class="danger-cancel" id="dangerCancel">Cancel</button>
+                    <button class="danger-confirm" id="dangerConfirm">Yes, Execute</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add("visible"));
+
+        const cleanup = (result) => {
+            overlay.classList.remove("visible");
+            setTimeout(() => document.body.removeChild(overlay), 250);
+            resolve(result);
+        };
+
+        document.getElementById("dangerConfirm").onclick = () => cleanup(true);
+        document.getElementById("dangerCancel").onclick  = () => cleanup(false);
+        overlay.addEventListener("click", e => { if (e.target === overlay) cleanup(false); });
+    });
+}
+
+
+// -------------------------------------------------------
+// MAIN – Two-step: Generate first, warn if dangerous, then Execute
+// -------------------------------------------------------
+
+askBtn.addEventListener("click", async () => {
+
+    const question = questionInput.value.trim();
+    if (!question) { alert("Please enter a question."); return; }
+
+    // Reset UI
+    sqlOutput.innerHTML       = '<span class="placeholder-text">Generating SQL...</span>';
+    explanationBox.innerHTML  = '<span class="placeholder-text">Thinking...</span>';
+    resultContainer.innerHTML = '<p class="placeholder-text">Loading...</p>';
+    rowCount.classList.add("hidden");
+    rawSQLText = "";
+    loader.classList.remove("hidden");
+    askBtn.disabled = true;
+
+    try {
+        // ── STEP 1: Generate SQL only (no execution) ──────────────
+        const genData = await fetchJSON(
+            "http://127.0.0.1:8000/generate",
+            getBasePayload(question)
+        );
+
+        if (genData.error) {
+            throw new Error(genData.error);
+        }
+
+        const sql = genData.sql || "";
+
+        // Show the generated SQL immediately so user sees it before deciding
+        rawSQLText = sql;
+        sqlOutput.innerHTML = formatSQL(sql || "No SQL generated");
+        statusText.textContent = `Connected · ${databaseInput.value}`;
+        dbStatus.classList.add("connected");
+
+        // ── STEP 2: Dangerous query gate — warn BEFORE execution ──
+        if (genData.dangerous) {
+            loader.classList.add("hidden");
+            askBtn.disabled = false;
+            explanationBox.innerHTML  = '<span class="placeholder-text">Waiting for confirmation...</span>';
+            resultContainer.innerHTML = '<p class="placeholder-text">Waiting for confirmation...</p>';
+
+            const confirmed = await showDangerModal(sql);
+
+            if (!confirmed) {
+                resultContainer.innerHTML = '<p class="placeholder-text">Execution cancelled by user.</p>';
+                explanationBox.innerHTML  = '<span class="placeholder-text">Cancelled.</span>';
+                return;
+            }
+
+            // Re-enable loader for execution phase
+            loader.classList.remove("hidden");
+            askBtn.disabled = true;
+        }
+
+        // ── STEP 3: Execute ────────────────────────────────────────
+        const execData = await fetchJSON(
+            "http://127.0.0.1:8000/execute",
+            { ...getBasePayload(question), sql }
+        );
+
+        loader.classList.add("hidden");
+        askBtn.disabled = false;
+
+        // Update SQL in case auto-fix changed it
+        rawSQLText = execData.sql || sql;
+        sqlOutput.innerHTML = formatSQL(execData.sql || sql);
+
+        if (execData.fixed) {
+            sqlOutput.innerHTML += `<div class="fixed-badge">⚡ Auto-fixed</div>`;
+        }
+
+        explanationBox.innerHTML = formatExplanation(execData.explanation || "No explanation available.");
+        renderResults(execData.result);
+
+    } catch (error) {
+        loader.classList.add("hidden");
+        askBtn.disabled = false;
+        statusText.textContent    = "Connection Failed";
+        dbStatus.classList.remove("connected");
+        sqlOutput.innerHTML       = '<span class="placeholder-text">Error generating SQL</span>';
+        resultContainer.innerHTML = `<p class="error">${error.message}</p>`;
+        console.error("[LuminaSQL] Error:", error);
+    }
 });

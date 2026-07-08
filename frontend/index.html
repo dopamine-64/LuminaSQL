@@ -4,127 +4,170 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LuminaSQL</title>
-
     <link rel="stylesheet" href="style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
+    <!-- LOADING SCREEN -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-inner">
+            <div class="loading-logo">Lumina<span>SQL</span></div>
+            <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
+            <div class="loading-label">Initialising engine...</div>
+        </div>
+    </div>
+
+    <!-- GRID OVERLAY -->
+    <div class="bg-grid"></div>
+
     <div class="container">
 
-        <div class="header">
-            <h1>Lumina<span>SQL</span></h1>
-            <p>Your Personal Ai Database Assistant.</p>
-        </div>
 
+    <!-- FLOATING API KEY BUTTON + POPOVER -->
+    <div class="api-key-fab-wrapper">
+        <button class="api-key-fab" id="apiKeyFab">
+            <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Enter Your Own Key
+        </button>
+
+        <div class="api-key-popover hidden" id="apiKeyPopover">
+            <div class="popover-header">
+                <span class="popover-title">OpenRouter API Key</span>
+                <button class="popover-close" id="apiKeyClose" title="Close">✕</button>
+            </div>
+            <div class="api-key-input-wrapper">
+                <input
+                    type="password"
+                    id="userApiKey"
+                    placeholder="sk-or-v1-..."
+                    autocomplete="off"
+                />
+                <button class="api-key-toggle" id="toggleApiKey" title="Show/hide key">
+                    <svg class="eye-icon" viewBox="0 0 20 20" fill="none">
+                        <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/>
+                        <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <svg class="eye-off-icon hidden" viewBox="0 0 20 20" fill="none">
+                        <path d="M3 3l14 14M8.5 8.6A2.5 2.5 0 0012.4 12M6.3 6.4C4.3 7.6 2.7 9.5 2 10c1 1.8 4 6 8 6a8 8 0 003.7-.9M10 4c4 0 7 4.2 8 6-.4.7-1 1.6-1.8 2.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <p class="api-key-hint">
+                Get a free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>
+                Your key will only be saved locally.
+            </p>
+            <div class="popover-status" id="popoverStatus"></div>
+        </div>
+    </div>
+
+        <!-- HEADER -->
+        <header class="header">
+            <h1>Lumina<span>SQL</span></h1>
+            <p>Your Personal AI Database Assistant.</p>
+        </header>
+
+        <!-- MAIN GRID -->
         <div class="bento-grid">
 
-            <!-- LEFT SIDE -->
-
+            <!-- LEFT: DB Connection -->
             <div class="card db-card">
-
-                <h2>Database Connection</h2>
+                <h2>Database <em>Connection</em></h2>
 
                 <div class="db-form">
-
-                    <input
-                        type="text"
-                        id="host"
-                        placeholder="Host"
-                        value="localhost"
-                    />
-
-                    <input
-                        type="number"
-                        id="port"
-                        placeholder="Port"
-                        value="3306"
-                    />
-
-                    <input
-                        type="text"
-                        id="username"
-                        placeholder="Username"
-                        value="root"
-                    />
-
-                    <input
-                        type="password"
-                        id="password"
-                        placeholder="Password"
-                    />
-
-                    <input
-                        type="text"
-                        id="database"
-                        placeholder="Database Name"
-                        value="company_db"
-                    />
-
+                    <div class="field-group">
+                        <label>Host</label>
+                        <input type="text" id="host" placeholder="localhost" value="localhost" autocomplete="off" />
+                    </div>
+                    <div class="field-group">
+                        <label>Port</label>
+                        <input type="number" id="port" placeholder="3306" value="3306" />
+                    </div>
+                    <div class="field-group">
+                        <label>Username</label>
+                        <input type="text" id="username" placeholder="root" value="root" autocomplete="off" />
+                    </div>
+                    <div class="field-group">
+                        <label>Password</label>
+                        <input type="password" id="password" placeholder="••••••••" autocomplete="new-password" />
+                    </div>
+                    <div class="field-group field-group--full">
+                        <label>Database Name</label>
+                        <input type="text" id="database" placeholder="company_db" autocomplete="off" />
+                    </div>
                 </div>
 
                 <div id="dbStatus" class="db-status">
-                    Not Connected
+                    <span class="status-dot"></span>
+                    <span class="status-text">Not Connected</span>
                 </div>
 
-                <textarea
-                    id="question"
-                    placeholder="Example: Show all customers from Dhaka"
-                ></textarea>
+                <div class="field-group field-group--full">
+                    <label>Your Question</label>
+                    <textarea id="question" placeholder="e.g. Show all customers from Dhaka with orders above ৳5000"></textarea>
+                </div>
 
                 <button id="askBtn">
-                    Generate & Execute
+                    <span class="btn-text">Generate &amp; Execute</span>
                 </button>
-
             </div>
 
-            <!-- RIGHT SIDE -->
+            <!-- RIGHT PANEL -->
+            <div class="right-panel">
 
-            <div class="left-panel">
-
+                <!-- SQL OUTPUT -->
                 <div class="card sql-card">
-
-                    <h2>Generated SQL</h2>
-
-                    <div id="sqlOutput" class="sql-box">
-                        SQL will appear here...
+                    <div class="sql-card-header">
+                        <h2>Generated <em>SQL</em></h2>
+                        <button class="copy-btn" id="copyBtn" title="Copy SQL">
+                            <svg class="copy-icon" viewBox="0 0 20 20" fill="none">
+                                <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M13 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            <svg class="check-icon hidden" viewBox="0 0 20 20" fill="none">
+                                <path d="M4 10l4.5 4.5L16 6" stroke="#5ddf2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span class="copy-label">Copy</span>
+                        </button>
                     </div>
-
+                    <div id="sqlOutput" class="sql-box">
+                        <span class="placeholder-text">-- SQL will appear here after generation</span>
+                    </div>
                 </div>
 
+                <!-- EXPLANATION -->
                 <div class="card explanation-card">
-
-                    <h2>AI Explanation</h2>
-
+                    <h3>AI <em>Explanation</em></h3>
                     <div id="explanationBox" class="explanation-box">
-                        AI explanation will appear here...
+                        <span class="placeholder-text">AI explanation will appear here...</span>
                     </div>
-
                 </div>
 
             </div>
-
         </div>
 
         <!-- RESULTS -->
-
         <div class="card results-card">
-
-            <h2>Results</h2>
-
-            <div id="resultContainer" class="table-wrapper">
-                <p class="placeholder">Results will appear here...</p>
+            <div class="results-header">
+                <h2>Query <em>Results</em></h2>
+                <div id="rowCount" class="row-count hidden"></div>
             </div>
-
+            <div id="resultContainer" class="table-wrapper">
+                <p class="placeholder-text">Results will appear here after execution...</p>
+            </div>
         </div>
-        <div id="loader" class="loader hidden"></div>
-        
-        <footer class="credits">
-            ⓒ 2026 Debapriyo Ganguly
-        </footer>
 
+        <!-- LOADER -->
+        <div id="loader" class="loader hidden">
+            <div class="loader-ring"></div>
+            <span>Processing...</span>
+        </div>
+
+        <footer class="credits">ⓒ 2026 Debapriyo Ganguly</footer>
     </div>
 
     <script src="script.js"></script>

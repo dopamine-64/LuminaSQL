@@ -52,7 +52,9 @@ jobs:
             --hidden-import=uvicorn.lifespan `
             --hidden-import=uvicorn.lifespan.on `
             --hidden-import=sqlalchemy.dialects.mysql `
-            --hidden-import=pymysql
+            --hidden-import=pymysql \
+            --hidden-import=requests `
+            --hidden-import=requests
 
       - name: Build Backend (macOS)
         if: runner.os == 'macOS'
@@ -71,6 +73,10 @@ jobs:
             --hidden-import=uvicorn.lifespan.on \
             --hidden-import=sqlalchemy.dialects.mysql \
             --hidden-import=pymysql
+
+      - name: Fix backend binary permissions (macOS)
+        if: runner.os == 'macOS'
+        run: chmod +x backend/dist/main
 
       - name: Install Node Modules
         run: npm ci
@@ -144,7 +150,7 @@ jobs:
             - M1 / M2 / M3 / M4 (Apple Silicon) → download the `arm64.dmg` file
             - Intel Mac → download the `.dmg` file (without arm64)
 
-            > If macOS blocks the app: right-click → Open → click **Open anyway**
+            > If macOS blocks the app: Go to Privacy and Security in Settings → Scroll to the bottom → click **Open anyway**
             > Or run in Terminal: `xattr -cr /Applications/LuminaSQL.app`
 
         env:

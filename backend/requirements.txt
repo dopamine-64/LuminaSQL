@@ -5,3 +5,5 @@ openai
 pydantic
 sqlalchemy
 pymysql
+requests
+python-dotenv

@@ -33,14 +33,23 @@ jobs:
       - name: Install Python Dependencies
         run: |
           cd backend
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
+      ####################################################################
+      # WINDOWS
+      ####################################################################
+
       - name: Build Backend (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           cd backend
-          pyinstaller main.py --onefile --name main `
+
+          pyinstaller main.py `
+            --onefile `
+            --name main `
             --hidden-import=uvicorn.logging `
             --hidden-import=uvicorn.loops `
             --hidden-import=uvicorn.loops.auto `
@@ -52,15 +61,22 @@ jobs:
             --hidden-import=uvicorn.lifespan `
             --hidden-import=uvicorn.lifespan.on `
             --hidden-import=sqlalchemy.dialects.mysql `
-            --hidden-import=pymysql \
-            --hidden-import=requests `
+            --hidden-import=pymysql `
             --hidden-import=requests
+
+      ####################################################################
+      # macOS
+      ####################################################################
 
       - name: Build Backend (macOS)
         if: runner.os == 'macOS'
+        shell: bash
         run: |
           cd backend
-          pyinstaller main.py --onefile --name main \
+
+          pyinstaller main.py \
+            --onefile \
+            --name main \
             --hidden-import=uvicorn.logging \
             --hidden-import=uvicorn.loops \
             --hidden-import=uvicorn.loops.auto \
@@ -72,11 +88,16 @@ jobs:
             --hidden-import=uvicorn.lifespan \
             --hidden-import=uvicorn.lifespan.on \
             --hidden-import=sqlalchemy.dialects.mysql \
-            --hidden-import=pymysql
+            --hidden-import=pymysql \
+            --hidden-import=requests
 
       - name: Fix backend binary permissions (macOS)
         if: runner.os == 'macOS'
         run: chmod +x backend/dist/main
+
+      ####################################################################
+      # Electron
+      ####################################################################
 
       - name: Install Node Modules
         run: npm ci
@@ -93,6 +114,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      ####################################################################
+      # Upload
+      ####################################################################
+
       - name: Upload Windows Artifact
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
@@ -107,13 +132,16 @@ jobs:
           name: LuminaSQL-macOS
           path: dist/*.dmg
 
+  ##########################################################################
+  # RELEASE
+  ##########################################################################
+
   release:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
@@ -127,31 +155,31 @@ jobs:
           name: LuminaSQL-macOS
           path: release-assets
 
-      - name: List release assets
+      - name: List Release Assets
         run: ls -lh release-assets/
 
-      - name: Create or Update GitHub Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "LuminaSQL ${{ github.ref_name }}"
+          name: LuminaSQL ${{ github.ref_name }}
+          files: release-assets/*
           draft: false
           prerelease: false
-          files: release-assets/*
           body: |
             ## LuminaSQL ${{ github.ref_name }}
 
-            ### Downloads
+            ### Windows
+            Download the `.exe` installer.
 
-            **Windows**
-            - Download the `.exe` installer
+            ### macOS
+            - Apple Silicon → `arm64.dmg`
+            - Intel → `.dmg`
 
-            **macOS**
-            - M1 / M2 / M3 / M4 (Apple Silicon) → download the `arm64.dmg` file
-            - Intel Mac → download the `.dmg` file (without arm64)
+            If macOS blocks the app:
 
-            > If macOS blocks the app: Go to Privacy and Security in Settings → Scroll to the bottom → click **Open anyway**
-            > Or run in Terminal: `xattr -cr /Applications/LuminaSQL.app`
-
+            ```bash
+            xattr -cr /Applications/LuminaSQL.app
+            ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

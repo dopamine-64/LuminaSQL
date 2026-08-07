@@ -48,7 +48,7 @@ def get_config_value(key):
 # MODEL
 # ================================================================
 
-OPENROUTER_MODEL = "poolside/laguna-xs.2:free"
+OPENROUTER_MODEL = "poolside/laguna-xs-2.1:free"
 
 
 # ================================================================

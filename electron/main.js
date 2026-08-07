@@ -1,64 +1,60 @@
 const { app, BrowserWindow, session } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
-const http = require("http");
 
 app.setName("LuminaSQL");
 
 let backendProcess;
 
-// ── Poll backend until it responds ──────────────────────────────
-function waitForBackend(retries = 40, interval = 500) {
-    return new Promise((resolve, reject) => {
-        let attempts = 0;
-
-        const check = () => {
-            const req = http.get("http://127.0.0.1:8000/health", (res) => {
-                if (res.statusCode === 200) {
-                    console.log("Backend is ready.");
-                    resolve();
-                } else {
-                    retry();
-                }
-            });
-
-            req.on("error", () => retry());
-            req.setTimeout(400, () => { req.destroy(); retry(); });
-        };
-
-        const retry = () => {
-            attempts++;
-            if (attempts >= retries) {
-                reject(new Error("Backend did not start in time."));
-            } else {
-                setTimeout(check, interval);
-            }
-        };
-
-        check();
-    });
-}
-
-// ── Start the compiled Python backend ───────────────────────────
 function startBackend() {
-    const backendExecutable = process.platform === "win32" ? "main.exe" : "main";
 
-    const backendPath = app.isPackaged
-        ? path.join(process.resourcesPath, "backend", "dist", backendExecutable)
-        : path.join(__dirname, "../backend/dist", backendExecutable);
+    const backendExecutable =
+        process.platform === "win32"
+            ? "main.exe"
+            : "main";
+
+    let backendPath;
+
+    if (app.isPackaged) {
+        backendPath = path.join(
+            process.resourcesPath,
+            "backend",
+            "dist",
+            backendExecutable
+        );
+    } else {
+        backendPath = path.join(
+            __dirname,
+            "../backend/dist",
+            backendExecutable
+        );
+    }
 
     console.log("Starting backend from:", backendPath);
 
-    backendProcess = spawn(backendPath, [], { shell: false });
+    backendProcess = spawn(backendPath, [], {
+        shell: false
+    });
 
-    backendProcess.stdout.on("data", (d) => console.log(`Backend: ${d.toString().trim()}`));
-    backendProcess.stderr.on("data", (d) => console.error(`Backend Error: ${d.toString().trim()}`));
-    backendProcess.on("error", (err) => console.error("Failed to start backend:", err));
-    backendProcess.on("close", (code) => console.log(`Backend exited with code ${code}`));
+    backendProcess.stdout.on("data", (data) => {
+        console.log(`Backend: ${data.toString()}`);
+    });
+
+    backendProcess.stderr.on("data", (data) => {
+        console.error(`Backend Error: ${data.toString()}`);
+    });
+
+    backendProcess.on("error", (err) => {
+        console.error("Failed to start backend:", err);
+    });
+
+    backendProcess.on("close", (code) => {
+        console.log(`Backend exited with code ${code}`);
+    });
 }
 
-// ── Create the main window ───────────────────────────────────────
 function createWindow() {
+
     const win = new BrowserWindow({
         width: 1400,
         height: 900,
@@ -67,8 +63,8 @@ function createWindow() {
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
             nodeIntegration: false,
-            contextIsolation: true,
-        },
+            contextIsolation: true
+        }
     });
 
     // Allow Google Fonts to load inside Electron
@@ -91,34 +87,35 @@ function createWindow() {
     win.loadFile(path.join(__dirname, "../frontend/index.html"));
 }
 
-// ── App ready ────────────────────────────────────────────────────
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
+
     app.setName("LuminaSQL");
 
-    // macOS dock icon
     if (process.platform === "darwin") {
-        app.dock.setIcon(path.join(__dirname, "../frontend/assets/icon.png"));
+        app.dock.setIcon(
+            path.join(__dirname, "../frontend/assets/icon.png")
+        );
     }
 
     startBackend();
 
-    try {
-        await waitForBackend();
-    } catch (e) {
-        console.error("Backend failed to start:", e.message);
-        // Open window anyway — frontend loading screen handles retries
-    }
-
-    createWindow();
+    // Same 5 second delay as before — keeps original behaviour
+    setTimeout(() => {
+        createWindow();
+    }, 5000);
 });
 
 app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") app.quit();
+    if (process.platform !== "darwin") {
+        app.quit();
+    }
 });
 
+// Re-open window on dock click (macOS)
 app.on("activate", () => {
-    // Re-create window on dock click (macOS standard behaviour)
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+    }
 });
 
 app.on("will-quit", () => {

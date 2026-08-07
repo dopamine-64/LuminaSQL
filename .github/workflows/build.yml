@@ -18,15 +18,15 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -107,7 +107,7 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
@@ -136,12 +136,16 @@ jobs:
             ## LuminaSQL ${{ github.ref_name }}
 
             ### Downloads
-            - **Windows**: Download the `.exe` installer
-            - **macOS**: Download the `.dmg` file
-              - If Mac blocks the app: right-click → Open → Open anyway
-              - Or run: `xattr -cr /Applications/LuminaSQL.app`
 
-            ### What's new
-            See commit history for changes.
+            **Windows**
+            - Download the `.exe` installer
+
+            **macOS**
+            - M1 / M2 / M3 / M4 (Apple Silicon) → download the `arm64.dmg` file
+            - Intel Mac → download the `.dmg` file (without arm64)
+
+            > If macOS blocks the app: right-click → Open → click **Open anyway**
+            > Or run in Terminal: `xattr -cr /Applications/LuminaSQL.app`
+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

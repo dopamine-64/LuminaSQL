@@ -364,7 +364,7 @@ askBtn.addEventListener("click", async () => {
 
     // Reset UI
     sqlOutput.innerHTML       = '<span class="placeholder-text">Generating SQL...</span>';
-    explanationBox.innerHTML  = '<span class="placeholder-text">Thinking...</span>';
+    explanationBox.innerHTML = '<span class="placeholder-text">Thinking...</span>';
     resultContainer.innerHTML = '<p class="placeholder-text">Loading...</p>';
     rowCount.classList.add("hidden");
     rawSQLText = "";
@@ -372,7 +372,7 @@ askBtn.addEventListener("click", async () => {
     askBtn.disabled = true;
 
     try {
-        // ── STEP 1: Generate SQL only (no execution) ──────────────
+        // ── STEP 1: Generate SQL + explanation (single AI call) ────
         const genData = await fetchJSON(
             "http://127.0.0.1:8000/generate",
             getBasePayload(question)
@@ -383,10 +383,12 @@ askBtn.addEventListener("click", async () => {
         }
 
         const sql = genData.sql || "";
+        const explanation = genData.explanation || "";
 
-        // Show the generated SQL immediately so user sees it before deciding
+        // Show the generated SQL + explanation immediately
         rawSQLText = sql;
         sqlOutput.innerHTML = formatSQL(sql || "No SQL generated");
+        explanationBox.innerHTML = formatExplanation(explanation || "No explanation available.");
         statusText.textContent = `Connected · ${databaseInput.value}`;
         dbStatus.classList.add("connected");
 
@@ -413,7 +415,7 @@ askBtn.addEventListener("click", async () => {
         // ── STEP 3: Execute ────────────────────────────────────────
         const execData = await fetchJSON(
             "http://127.0.0.1:8000/execute",
-            { ...getBasePayload(question), sql }
+            { ...getBasePayload(question), sql, explanation }
         );
 
         loader.classList.add("hidden");

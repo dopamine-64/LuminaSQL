@@ -166,7 +166,9 @@ def ask_ai(messages: list, user_key: str = "") -> str:
 
 
 # ================================================================
-# SQL GENERATION
+# SQL GENERATION (question only, no explanation)
+# Used by /generate, where the frontend just wants the SQL to
+# review/approve before it's ever executed.
 # ================================================================
 
 def generate_sql(question: str, engine, user_key: str = "") -> str:
@@ -209,6 +211,87 @@ SQL:"""
 
 
 # ================================================================
+# EXPLAIN SQL (given SQL text, not a question)
+# Used by /execute, where the SQL was already generated/fixed and
+# run — there's no "question" step left to merge this into.
+# ================================================================
+
+def explain_sql(sql: str, user_key: str = "") -> str:
+    prompt = f"""Explain this SQL query in simple English. Keep it short and beginner friendly. Do not repeat the SQL itself.
+
+SQL:
+{sql}"""
+
+    return ask_ai([{"role": "user", "content": prompt}], user_key)
+
+
+# ================================================================
+# SQL GENERATION + EXPLANATION (combined, single API call)
+# Used by /ask, which previously called generate_sql() then
+# explain_sql() as two separate requests — this merges them.
+# ================================================================
+
+def generate_sql_and_explanation(question: str, engine, user_key: str = "") -> dict:
+    schema = get_schema(engine)
+
+    column_mentions = re.findall(r"- (\w+) :", schema)
+    table_mentions  = re.findall(r"TABLE: `(\w+)`", schema)
+    grounding_hint  = ""
+    if table_mentions:
+        grounding_hint = f"\nKNOWN TABLES: {', '.join(table_mentions)}"
+    if column_mentions:
+        grounding_hint += f"\nKNOWN COLUMNS (sample): {', '.join(column_mentions[:40])}"
+
+    prompt = f"""You are a MySQL expert.
+
+DATABASE SCHEMA:
+{schema}
+{grounding_hint}
+
+Generate BOTH:
+1. A valid MySQL query.
+2. A short beginner-friendly explanation.
+
+STRICT RULES — follow every one or the output will be rejected:
+1. Use ONLY tables and columns that appear verbatim in the DATABASE SCHEMA above. Never invent or guess names.
+2. If the question says "show all" or "list all" or "get all", use SELECT * FROM <table> unless specific columns are requested.
+3. If the question is ambiguous about which table to use, pick the most relevant one from KNOWN TABLES.
+4. Always write valid MySQL syntax. Do NOT use backticks around any identifiers.
+5. Never add a semicolon at the end of the SQL.
+6. The explanation should be 1-3 sentences, beginner friendly, and must not repeat the raw SQL verbatim.
+7. Return ONLY valid JSON. No markdown, no code fences, no commentary — just the JSON object.
+
+EXAMPLE OUTPUT FORMAT:
+{{
+    "sql": "SELECT * FROM users",
+    "explanation": "This query retrieves every row from the users table."
+}}
+
+QUESTION: {question}
+
+JSON:"""
+
+    response = ask_ai([{"role": "user", "content": prompt}], user_key)
+
+    # Some models wrap JSON in markdown code fences — strip those before parsing
+    cleaned = response.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?", "", cleaned)
+        cleaned = cleaned.rstrip("`").strip()
+
+    try:
+        result = json.loads(cleaned)
+        return {
+            "sql": result["sql"].strip(),
+            "explanation": result["explanation"].strip()
+        }
+    except Exception:
+        raise Exception(
+            "AI returned invalid JSON:\n\n" + response
+        )
+
+
+# ================================================================
 # FIX SQL
 # ================================================================
 
@@ -247,18 +330,5 @@ STRICT RULES:
 5. Never add a semicolon at the end.
 
 FIXED SQL:"""
-
-    return ask_ai([{"role": "user", "content": prompt}], user_key)
-
-
-# ================================================================
-# EXPLAIN SQL
-# ================================================================
-
-def explain_sql(sql: str, user_key: str = "") -> str:
-    prompt = f"""Explain this SQL query in simple English. Keep it short and beginner friendly. Do not repeat the SQL itself.
-
-SQL:
-{sql}"""
 
     return ask_ai([{"role": "user", "content": prompt}], user_key)

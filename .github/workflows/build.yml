@@ -77,7 +77,13 @@ jobs:
 
       - name: Build Electron App (Windows)
         if: runner.os == 'Windows'
-        run: npx electron-builder --win
+        run: npx electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Electron App (macOS)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -88,12 +94,6 @@ jobs:
           name: LuminaSQL-Windows
           path: dist/*.exe
 
-      - name: Build Electron App (macOS)
-        if: runner.os == 'macOS'
-        run: npx electron-builder --mac
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload macOS Artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
@@ -101,11 +101,47 @@ jobs:
           name: LuminaSQL-macOS
           path: dist/*.dmg
 
-      - name: Upload Release Assets
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LuminaSQL-Windows
+          path: release-assets
+
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LuminaSQL-macOS
+          path: release-assets
+
+      - name: List release assets
+        run: ls -lh release-assets/
+
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/*.exe
-            dist/*.dmg
+          tag_name: ${{ github.ref_name }}
+          name: "LuminaSQL ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          files: release-assets/*
+          body: |
+            ## LuminaSQL ${{ github.ref_name }}
+
+            ### Downloads
+            - **Windows**: Download the `.exe` installer
+            - **macOS**: Download the `.dmg` file
+              - If Mac blocks the app: right-click → Open → Open anyway
+              - Or run: `xattr -cr /Applications/LuminaSQL.app`
+
+            ### What's new
+            See commit history for changes.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

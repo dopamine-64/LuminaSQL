@@ -4,7 +4,7 @@
   "version": "1.2.1",
   "description": "LuminaSQL Desktop App",
   "main": "electron/main.js",
-  "author": "Your Name",
+  "author": "Debapriyo Ganguly",
   "license": "ISC",
   "type": "commonjs",
 
@@ -18,6 +18,9 @@
   "build": {
     "appId": "com.luminasql.desktop",
     "productName": "LuminaSQL",
+    "asar": true,
+    "compression": "maximum",
+
     "publish": [
       {
         "provider": "github",
@@ -44,9 +47,15 @@
     ],
 
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
       "category": "public.app-category.developer-tools",
-      "icon": "frontend/assets/icon.icns"
+      "icon": "frontend/assets/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "electron/entitlements.mac.plist",
+      "entitlementsInherit": "electron/entitlements.mac.plist"
     },
 
     "win": {
@@ -57,6 +66,15 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+
+    "dmg": {
+      "title": "LuminaSQL ${version}",
+      "background": null,
+      "window": {
+        "width": 540,
+        "height": 380
+      }
     }
   },
 

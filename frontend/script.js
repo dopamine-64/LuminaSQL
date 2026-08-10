@@ -24,6 +24,21 @@ const appContainer    = document.querySelector(".container");
 const API_URL = "http://127.0.0.1:8000/ask";
 
 // -------------------------------------------------------
+// HTML ESCAPING — every value that came from the AI, the
+// database, or anywhere outside this file's own literals
+// MUST pass through this before touching innerHTML.
+// -------------------------------------------------------
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+// -------------------------------------------------------
 // BOOT – wait for backend, then reveal UI
 // -------------------------------------------------------
 
@@ -199,7 +214,10 @@ function formatSQL(raw) {
 // -------------------------------------------------------
 
 function formatExplanation(text) {
-    return text
+    // Escape first so any HTML-like content in the AI's response is
+    // rendered as inert text, not live markup — then layer the
+    // markdown-style formatting on top of the now-safe text.
+    return escapeHtml(text)
         .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
         .replace(/\*(.*?)\*/g,     "<em>$1</em>")
         .replace(/`(.*?)`/g,       "<code>$1</code>")
@@ -219,11 +237,11 @@ function renderResults(results) {
         return;
     }
     if (results.error) {
-        resultContainer.innerHTML = `<p class="error">${results.error}</p>`;
+        resultContainer.innerHTML = `<p class="error">${escapeHtml(results.error)}</p>`;
         return;
     }
     if (typeof results === "string") {
-        resultContainer.innerHTML = `<p class="placeholder-text">${results}</p>`;
+        resultContainer.innerHTML = `<p class="placeholder-text">${escapeHtml(results)}</p>`;
         return;
     }
     if (!Array.isArray(results) || results.length === 0) {
@@ -233,13 +251,13 @@ function renderResults(results) {
 
     const columns = Object.keys(results[0]);
     let html = `<table><thead><tr>`;
-    columns.forEach(col => { html += `<th>${col}</th>`; });
+    columns.forEach(col => { html += `<th>${escapeHtml(col)}</th>`; });
     html += `</tr></thead><tbody>`;
     results.forEach(row => {
         html += "<tr>";
         columns.forEach(col => {
             const val = row[col];
-            html += `<td>${val !== null ? val : "<em>NULL</em>"}</td>`;
+            html += `<td>${val !== null ? escapeHtml(val) : "<em>NULL</em>"}</td>`;
         });
         html += "</tr>";
     });
@@ -364,7 +382,7 @@ askBtn.addEventListener("click", async () => {
 
     // Reset UI
     sqlOutput.innerHTML       = '<span class="placeholder-text">Generating SQL...</span>';
-    explanationBox.innerHTML = '<span class="placeholder-text">Thinking...</span>';
+    explanationBox.innerHTML  = '<span class="placeholder-text">Thinking...</span>';
     resultContainer.innerHTML = '<p class="placeholder-text">Loading...</p>';
     rowCount.classList.add("hidden");
     rawSQLText = "";
@@ -372,7 +390,7 @@ askBtn.addEventListener("click", async () => {
     askBtn.disabled = true;
 
     try {
-        // ── STEP 1: Generate SQL + explanation (single AI call) ────
+        // ── STEP 1: Generate SQL only (no execution) ──────────────
         const genData = await fetchJSON(
             "http://127.0.0.1:8000/generate",
             getBasePayload(question)
@@ -438,7 +456,7 @@ askBtn.addEventListener("click", async () => {
         statusText.textContent    = "Connection Failed";
         dbStatus.classList.remove("connected");
         sqlOutput.innerHTML       = '<span class="placeholder-text">Error generating SQL</span>';
-        resultContainer.innerHTML = `<p class="error">${error.message}</p>`;
+        resultContainer.innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`;
         console.error("[LuminaSQL] Error:", error);
     }
 });

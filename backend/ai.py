@@ -217,7 +217,9 @@ SQL:"""
 # ================================================================
 
 def explain_sql(sql: str, user_key: str = "") -> str:
-    prompt = f"""Explain this SQL query in simple English. Keep it short and beginner friendly. Do not repeat the SQL itself.
+    prompt = f"""Explain this SQL query in plain English for a beginner. Write 4-6 sentences covering: what the query does overall, which tables/columns it uses and why, what any filters/joins/aggregations/ordering mean, and what kind of result to expect. Do not repeat the SQL itself.
+
+Wrap every table name, column name, and literal filter value (e.g. a city, status, or ID being matched) in **double asterisks** so they stand out, e.g. "the **customers** table" or "the **city** field has the value **dallas**". Do not bold anything else.
 
 SQL:
 {sql}"""
@@ -250,7 +252,7 @@ DATABASE SCHEMA:
 
 Generate BOTH:
 1. A valid MySQL query.
-2. A short beginner-friendly explanation.
+2. A clear, elaborate explanation aimed at a beginner.
 
 STRICT RULES — follow every one or the output will be rejected:
 1. Use ONLY tables and columns that appear verbatim in the DATABASE SCHEMA above. Never invent or guess names.
@@ -258,13 +260,14 @@ STRICT RULES — follow every one or the output will be rejected:
 3. If the question is ambiguous about which table to use, pick the most relevant one from KNOWN TABLES.
 4. Always write valid MySQL syntax. Do NOT use backticks around any identifiers.
 5. Never add a semicolon at the end of the SQL.
-6. The explanation should be 1-3 sentences, beginner friendly, and must not repeat the raw SQL verbatim.
-7. Return ONLY valid JSON. No markdown, no code fences, no commentary — just the JSON object.
+6. The explanation should be 4-6 sentences and cover: what the query does in plain English, which table(s)/column(s) it touches and why, what any filters/joins/aggregations/ordering mean in context, and what kind of result the user should expect back. Write it like you're teaching someone who is new to SQL. Do not repeat the raw SQL verbatim.
+7. In the explanation, wrap every table name, column name, and literal filter value (e.g. a city, status, or ID being matched) in **double asterisks** so they stand out, e.g. "the **customers** table" or "the **city** field has the value **dallas**". Do not bold anything else — no full sentences, no generic words.
+8. Return ONLY valid JSON. No markdown, no code fences, no commentary — just the JSON object.
 
 EXAMPLE OUTPUT FORMAT:
 {{
     "sql": "SELECT * FROM users",
-    "explanation": "This query retrieves every row from the users table."
+    "explanation": "This query looks at the **users** table and returns every column for each row. Since no filter is applied, it pulls back all the records currently stored in that table."
 }}
 
 QUESTION: {question}

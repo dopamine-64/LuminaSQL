@@ -177,7 +177,9 @@ jobs:
             - Intel → `.dmg`
 
             If macOS blocks the app:
-
+            - Go to privacy and security, scroll to the bottom and click open anyway.
+            
+            In Terminal:
             ```bash
             xattr -cr /Applications/LuminaSQL.app
             ```

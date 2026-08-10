@@ -1,7 +1,7 @@
 
 # ⚡ LuminaSQL
 
-> Your personal AI-powered desktop database assistant.
+> LuminaSQL is a desktop app that turns plain English into real MySQL queries — connect to any local or cloud database, ask for what you want in natural language and it generates the SQL, explains it in beginner-friendly terms with key tables/columns highlighted and runs it safely with built-in confirmation for destructive operations and automatic error-fixing on failed queries.
 
 ---
 

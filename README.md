@@ -40,6 +40,7 @@
 
 ## Future Updates
 
+* Reduce overall app size (Drop the PyInstaller Python backend entirely and use Node.js)
 * Support for newer/better AI models as they become available
 * Local model support for fully offline use
 

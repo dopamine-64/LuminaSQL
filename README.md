@@ -29,11 +29,11 @@
 
 * Convert plain English → SQL instantly
 * Full MySQL support — localhost or any cloud-hosted database
-* Schema-aware AI (reads real tables, columns, keys, and sample data — no guessing)
+* Schema-aware AI (reads real tables, columns, keys and sample data — no guessing)
 * Auto-fix on failed queries, with retry
 * Built-in safety checks for destructive queries (DELETE, UPDATE, DROP, etc.)
-* Add, update, and remove records without writing SQL — (faster alternative to Laravel Tinker for quick data changes)
-* Great for learning SQL — see your question, the generated query, and the resulting table change side by side
+* Add, update and remove records without writing SQL — (faster alternative to Laravel Tinker for quick data changes)
+* Great for learning SQL — see your question, the generated query and the resulting table change side by side
 * Bring your own OpenRouter API key, with automatic fallback to built-in keys
 * Fast Electron desktop app — Windows + macOS support
 * Python + FastAPI backend

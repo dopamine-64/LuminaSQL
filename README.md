@@ -1,5 +1,5 @@
 
-# <img width="40" height="40" align="top" alt="image" src="https://github.com/dopamine-64/LuminaSQL/blob/eba3370306b6770a72a7ec798635e5701718f5ee/frontend/assets/icon.png" />LuminaSQL
+# <img width="45" height="45" align="top" alt="image" src="https://github.com/dopamine-64/LuminaSQL/blob/eba3370306b6770a72a7ec798635e5701718f5ee/frontend/assets/icon.png" />LuminaSQL
 
 
 > LuminaSQL is a desktop app that turns plain English into real MySQL queries — connect to any local or cloud database, ask for what you want in natural language and it generates the SQL, explains it in beginner-friendly terms with key tables/columns highlighted and runs it safely with built-in confirmation for destructive operations and automatic error-fixing on failed queries.
@@ -17,12 +17,12 @@
 ## 🚀 Download LuminaSQL
 
 ### 🖥️ Windows
-[![Download for Windows](https://img.shields.io/badge/Download-Windows-blue?style=for-the-badge&logo=windows)](https://github.com/dopamine-64/LuminaSQL/releases/latest)
+[![Download](https://img.shields.io/badge/Download-555555?style=for-the-badge)![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/dopamine-64/LuminaSQL/releases/latest)
 
 ---
 
 ### 💻 macOS
-[![Download for macOS](https://img.shields.io/badge/Download-macOS-black?style=for-the-badge&logo=apple)](https://github.com/dopamine-64/LuminaSQL/releases/latest)
+[![Download](https://img.shields.io/badge/Download-555555?style=for-the-badge)![macOS](https://img.shields.io/badge/mac-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/dopamine-64/LuminaSQL/releases/latest)
 
 ---
 

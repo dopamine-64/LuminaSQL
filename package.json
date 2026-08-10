@@ -1,7 +1,7 @@
 {
   "name": "ai-db-assistant",
   "productName": "LuminaSQL",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "LuminaSQL Desktop App",
   "main": "electron/main.js",
   "author": "Debapriyo Ganguly",

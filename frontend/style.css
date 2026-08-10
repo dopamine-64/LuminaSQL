@@ -210,7 +210,7 @@ body {
 /* ---- FORM FIELDS ---- */
 .db-form {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
 }
 
@@ -233,6 +233,8 @@ body {
 .field-group input,
 .field-group select,
 .field-group textarea {
+    width: 100%;
+    min-width: 0;
     background: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);

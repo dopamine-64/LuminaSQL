@@ -1,5 +1,7 @@
 
-# <img width="45" height="45" align="top" alt="image" src="https://github.com/dopamine-64/LuminaSQL/blob/eba3370306b6770a72a7ec798635e5701718f5ee/frontend/assets/icon.png" />LuminaSQL
+<p align="center">
+  <img src="frontend/assets/LuminaSQL.png" alt="LuminaSQL" width="700">
+</p>
 
 
 > LuminaSQL is a desktop app that turns plain English into real MySQL queries — connect to any local or cloud database, ask for what you want in natural language and it generates the SQL, explains it in beginner-friendly terms with key tables/columns highlighted and runs it safely with built-in confirmation for destructive operations and automatic error-fixing on failed queries.
